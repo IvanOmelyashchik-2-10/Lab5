@@ -9,6 +9,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.font.FontRenderContext;
+import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.text.DecimalFormat;
@@ -32,6 +33,7 @@ import javax.swing.JPanel;
         private BasicStroke axisStroke;
         private BasicStroke gridStroke;
         private BasicStroke markerStroke;
+        private BasicStroke graphicsINT;
         private BasicStroke selectionStroke;
         private Font axisFont;
         private Font labelsFont;
@@ -48,6 +50,7 @@ import javax.swing.JPanel;
             this.markerStroke = new BasicStroke(1.0F, 0, 0, 10.0F, (float[])null, 0.0F);
             this.selectionStroke = new BasicStroke(1.0F, 0, 0, 10.0F, new float[]{10.0F, 10.0F}, 0.0F);
             this.axisFont = new Font("Serif", 1, 36);
+            this.graphicsINT = new BasicStroke(3,0,0,20, null,0);
             this.labelsFont = new Font("Serif", 0, 10);
             formatter.setMaximumFractionDigits(5);
             this.addMouseListener(new GraphicsDisplay.MouseHandler());
@@ -103,6 +106,9 @@ import javax.swing.JPanel;
                 this.paintMarkers(canvas);
                 this.paintLabels(canvas);
                 this.paintSelection(canvas);
+             //   this.paintINTMarkers(canvas);
+                this.paintINTGraphics(canvas);
+
             }
         }
 
@@ -113,7 +119,26 @@ import javax.swing.JPanel;
                 canvas.draw(this.selectionRect);
             }
         }
+        private void paintINTGraphics(Graphics2D canvas) {
+            canvas.setStroke(this.graphicsINT);
+            canvas.setColor(Color.magenta);
+            Integer currentX = null;
+            Integer currentY = null;
+            Iterator var5 = this.graphicsData.iterator();
 
+            while(var5.hasNext()) {
+                Double[] point = (Double[])var5.next();
+                if (!(point[0] < this.viewport[0][0]) && !(point[1] > this.viewport[0][1]) && !(point[0] > this.viewport[1][0]) && !(point[1] < this.viewport[1][1])) {
+                    if (currentX != null && currentY != null) {
+                        canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(currentX, currentY),this.translateXYtoPoint(point[0], point[1])));
+                    }
+
+                    currentX = point[0].intValue();
+                    currentY = point[1].intValue();
+                }
+            }
+
+        }
         private void paintGraphics(Graphics2D canvas) {
             canvas.setStroke(this.markerStroke);
             canvas.setColor(Color.RED);
@@ -134,35 +159,37 @@ import javax.swing.JPanel;
             }
 
         }
-
-        private void paintMarkers(Graphics2D canvas) {
-            canvas.setStroke(this.markerStroke);
-            canvas.setColor(Color.RED);
-            canvas.setPaint(Color.RED);
-            java.awt.geom.Ellipse2D.Double lastMarker = null;
+        private void paintINTMarkers(Graphics2D canvas) {
+            canvas.setStroke(this.graphicsINT);
+            canvas.setColor(Color.BLACK);
+            canvas.setPaint(Color.orange);
+            GeneralPath lastMarker = null;
             int i = -1;
             Iterator var5 = this.graphicsData.iterator();
 
             while(var5.hasNext()) {
-                Double[] point = (Double[])var5.next();
+                Integer[] point = (Integer[]) var5.next();
                 ++i;
                 if (!(point[0] < this.viewport[0][0]) && !(point[1] > this.viewport[0][1]) && !(point[0] > this.viewport[1][0]) && !(point[1] < this.viewport[1][1])) {
-                    byte radius;
-                    if (i == this.selectedMarker) {
-                        radius = 6;
-                    } else {
-                        radius = 3;
-                    }
+                    GeneralPath star = new GeneralPath();
+                    Point2D.Double center = translateXYINTtoPoint(point[0], point[1]);
+                    star.moveTo(center.getX() -6, center.getY());
+                    star.lineTo(star.getCurrentPoint().getX()+4, star.getCurrentPoint().getY() + 3);
+                    star.lineTo(star.getCurrentPoint().getX()+2, star.getCurrentPoint().getY()+3);
+                    star.lineTo(star.getCurrentPoint().getX()+2, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()+4, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()-4, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()-2, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()-2, star.getCurrentPoint().getY()+3);
+                    // star.lineTo(star.getCurrentPoint().getX()-4, star.getCurrentPoint().getY()+3);
+                    star.closePath();
 
-                    java.awt.geom.Ellipse2D.Double marker = new java.awt.geom.Ellipse2D.Double();
-                    Point2D center = this.translateXYtoPoint(point[0], point[1]);
-                    Point2D corner = new java.awt.geom.Point2D.Double(center.getX() + (double)radius, center.getY() + (double)radius);
-                    marker.setFrameFromCenter(center, corner);
+
                     if (i == this.selectedMarker) {
-                        lastMarker = marker;
+                        lastMarker = star;
                     } else {
-                        canvas.draw(marker);
-                        canvas.fill(marker);
+                        canvas.draw(star);
+                       // canvas.fill(star);
                     }
                 }
             }
@@ -175,6 +202,65 @@ import javax.swing.JPanel;
             }
 
         }
+        private void paintMarkers(Graphics2D canvas) {
+            canvas.setStroke(this.markerStroke);
+            canvas.setColor(Color.RED);
+            canvas.setPaint(Color.RED);
+            GeneralPath lastMarker = null;
+            int i = -1;
+            Iterator var5 = this.graphicsData.iterator();
+
+            while(var5.hasNext()) {
+                Double[] point = (Double[])var5.next();
+                ++i;
+                if (!(point[0] < this.viewport[0][0]) && !(point[1] > this.viewport[0][1]) && !(point[0] > this.viewport[1][0]) && !(point[1] < this.viewport[1][1])) {
+                    GeneralPath star = new GeneralPath();
+                    Point2D.Double center = translateXYtoPoint(point[0], point[1]);
+                    star.moveTo(center.getX() -6, center.getY());
+                    star.lineTo(star.getCurrentPoint().getX()+4, star.getCurrentPoint().getY() + 3);
+                    star.lineTo(star.getCurrentPoint().getX()+2, star.getCurrentPoint().getY()+3);
+                    star.lineTo(star.getCurrentPoint().getX()+2, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()+4, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()-4, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()-2, star.getCurrentPoint().getY()-3);
+                    star.lineTo(star.getCurrentPoint().getX()-2, star.getCurrentPoint().getY()+3);
+                    // star.lineTo(star.getCurrentPoint().getX()-4, star.getCurrentPoint().getY()+3);
+                    star.closePath();
+                    Boolean art = false;
+                    if(Math.abs(point[0] + point[1]) < 10){
+                        art = true;
+                    }
+
+
+                    if (i == this.selectedMarker)
+                    {
+                        lastMarker = star;
+                    }
+                    else if (art){
+                        canvas.setColor(Color.CYAN);
+                        canvas.draw(star);
+                        canvas.setColor(Color.RED);
+
+                    }
+                    else {
+                        canvas.draw(star);
+                        // canvas.fill(star);
+                    }
+                }
+
+                if (lastMarker != null) {
+                    canvas.setColor(Color.BLUE);
+                    canvas.setPaint(Color.BLUE);
+                    canvas.draw(lastMarker);
+                    canvas.fill(lastMarker);
+                }
+
+                }
+            }
+
+
+
+
 
         private void paintLabels(Graphics2D canvas) {
             canvas.setColor(Color.BLACK);
@@ -278,9 +364,17 @@ import javax.swing.JPanel;
             double deltaY = this.viewport[0][1] - y;
             return new java.awt.geom.Point2D.Double(deltaX * this.scaleX, deltaY * this.scaleY);
         }
+        protected java.awt.geom.Point2D.Double translateXYINTtoPoint(int x, int y) {
+            int deltaX = (int)x - (int)this.viewport[0][0];
+            int deltaY = (int)this.viewport[0][1] - (int)y;
+            return new java.awt.geom.Point2D.Double(deltaX * this.scaleX, deltaY * this.scaleY);
+        }
 
         protected double[] translatePointToXY(int x, int y) {
             return new double[]{this.viewport[0][0] + (double)x / this.scaleX, this.viewport[0][1] - (double)y / this.scaleY};
+        }
+        protected double[] translatePointToXYINT(int x, int y) {
+            return new double[]{(int)this.viewport[0][0] + (int)x / this.scaleX,(int) this.viewport[0][1] - (int)y / this.scaleY};
         }
 
         protected int findSelectedPoint(int x, int y) {
